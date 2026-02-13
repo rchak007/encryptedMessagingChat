@@ -1,0 +1,617 @@
+{
+  "address": "DevpMzGDfkVPuzkGY19S1KDP86YWKECqJ1cSwuVieiD4",
+  "metadata": {
+    "name": "relay",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "create_group",
+      "discriminator": [
+        79,
+        60,
+        158,
+        134,
+        61,
+        199,
+        56,
+        248
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  114,
+                  111,
+                  117,
+                  112
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "group_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  114,
+                  111,
+                  117,
+                  112,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "group_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "members",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "wrapped_keys",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "MemberWrappedKey"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "register",
+      "discriminator": [
+        211,
+        124,
+        67,
+        15,
+        211,
+        194,
+        178,
+        240
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "nacl_public_key",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "rotate_group_key",
+      "discriminator": [
+        238,
+        175,
+        55,
+        223,
+        174,
+        8,
+        54,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "member",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  114,
+                  111,
+                  117,
+                  112
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "group_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "group_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "wrapped_keys",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "MemberWrappedKey"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "send_group_message",
+      "discriminator": [
+        140,
+        132,
+        193,
+        112,
+        163,
+        204,
+        84,
+        254
+      ],
+      "accounts": [
+        {
+          "name": "sender",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  114,
+                  111,
+                  117,
+                  112
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "group_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  114,
+                  111,
+                  117,
+                  112,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "gmsg",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  109,
+                  115,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              },
+              {
+                "kind": "account",
+                "path": "counter.next_id",
+                "account": "GroupCounter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "group_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "key_version",
+          "type": "u64"
+        },
+        {
+          "name": "ciphertext",
+          "type": "bytes"
+        },
+        {
+          "name": "nonce",
+          "type": "bytes"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "GroupCounter",
+      "discriminator": [
+        51,
+        121,
+        217,
+        187,
+        211,
+        36,
+        92,
+        39
+      ]
+    },
+    {
+      "name": "GroupMessage",
+      "discriminator": [
+        114,
+        199,
+        46,
+        234,
+        132,
+        64,
+        35,
+        136
+      ]
+    },
+    {
+      "name": "GroupState",
+      "discriminator": [
+        55,
+        178,
+        239,
+        222,
+        83,
+        210,
+        195,
+        67
+      ]
+    },
+    {
+      "name": "Registry",
+      "discriminator": [
+        47,
+        174,
+        110,
+        246,
+        184,
+        182,
+        252,
+        218
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidNaClPublicKey",
+      "msg": "Invalid NaCl public key."
+    },
+    {
+      "code": 6001,
+      "name": "NoMembers",
+      "msg": "No members provided."
+    },
+    {
+      "code": 6002,
+      "name": "TooManyMembers",
+      "msg": "Too many members."
+    },
+    {
+      "code": 6003,
+      "name": "CreatorNotMember",
+      "msg": "Creator must be a member."
+    },
+    {
+      "code": 6004,
+      "name": "GroupIdMismatch",
+      "msg": "Group id mismatch."
+    },
+    {
+      "code": 6005,
+      "name": "NotGroupMember",
+      "msg": "Signer is not a group member."
+    },
+    {
+      "code": 6006,
+      "name": "WrappedKeysCountMismatch",
+      "msg": "Wrapped keys count must equal members count."
+    },
+    {
+      "code": 6007,
+      "name": "WrappedKeyNotMember",
+      "msg": "Wrapped key refers to a wallet not in members."
+    },
+    {
+      "code": 6008,
+      "name": "WrappedKeyTooLong",
+      "msg": "Wrapped key too long."
+    },
+    {
+      "code": 6009,
+      "name": "WrappedKeysMissingOrDuplicate",
+      "msg": "Wrapped keys missing or duplicate for a member."
+    },
+    {
+      "code": 6010,
+      "name": "CiphertextTooLong",
+      "msg": "Ciphertext too long."
+    },
+    {
+      "code": 6011,
+      "name": "NonceTooLong",
+      "msg": "Nonce too long."
+    },
+    {
+      "code": 6012,
+      "name": "KeyVersionMismatch",
+      "msg": "Key version mismatch."
+    },
+    {
+      "code": 6013,
+      "name": "MathOverflow",
+      "msg": "Math overflow."
+    }
+  ],
+  "types": [
+    {
+      "name": "GroupCounter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "group",
+            "type": "pubkey"
+          },
+          {
+            "name": "next_id",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GroupMessage",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "group",
+            "type": "pubkey"
+          },
+          {
+            "name": "sender",
+            "type": "pubkey"
+          },
+          {
+            "name": "msg_id",
+            "type": "u64"
+          },
+          {
+            "name": "key_version",
+            "type": "u64"
+          },
+          {
+            "name": "ciphertext",
+            "type": "bytes"
+          },
+          {
+            "name": "nonce",
+            "type": "bytes"
+          },
+          {
+            "name": "created_at_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GroupState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "group_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "members",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "key_version",
+            "type": "u64"
+          },
+          {
+            "name": "wrapped_keys",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "MemberWrappedKey"
+                }
+              }
+            }
+          },
+          {
+            "name": "created_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "updated_at_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MemberWrappedKey",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "member",
+            "type": "pubkey"
+          },
+          {
+            "name": "wrapped_key",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Registry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "nacl_public_key",
+            "type": "string"
+          },
+          {
+            "name": "updated_at_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

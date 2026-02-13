@@ -7,10 +7,10 @@ skip-lint = false
 idl-build = ["anchor-lang/idl-build"]
 
 [programs.localnet]
-relay = "74sJMY922tbcPNrATAaNuLUPLkkF5HgMMCY3kp85pcSL"
+relay = "DevpMzGDfkVPuzkGY19S1KDP86YWKECqJ1cSwuVieiD4"
 
 [programs.devnet]
-relay = "74sJMY922tbcPNrATAaNuLUPLkkF5HgMMCY3kp85pcSL"
+relay = "DevpMzGDfkVPuzkGY19S1KDP86YWKECqJ1cSwuVieiD4"
 
 
 [registry]

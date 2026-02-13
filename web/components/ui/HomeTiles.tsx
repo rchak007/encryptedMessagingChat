@@ -1,4 +1,3 @@
-// src/components/HomeTiles.tsx
 'use client';
 
 import React from 'react';
@@ -13,31 +12,32 @@ export default function HomeTiles() {
       <div className={tileClasses}>
         <h2 className="text-xl font-semibold mb-2 text-purple-600">🕵️ Secret Messaging</h2>
         <p>
-          Relay is an open-source Solana-powered dApp for encrypted messaging.
-          Your message is encrypted *before* it's written to the blockchain — no
-          one, not even the server, can read it.
+          Relay is an open-source Solana-powered dApp for quantum-safe encrypted messaging.
+          Your message is encrypted with <strong>ML-KEM-768</strong> *before* it's written to the blockchain — no
+          one, not even the server, can read it. Protected against future quantum computers.
         </p>
       </div>
 
       {/* Tile 2: Use Cases (With Humor) */}
       <div className={tileClasses}>
-        <h2 className="text-xl font-semibold mb-2 text-emerald-600">🔐 Why Use It?</h2>
+        <h2 className="text-xl font-semibold mb-2 text-emerald-600">🔒 Why Use It?</h2>
         <ul className="list-disc list-inside text-sm">
-          <li>Escape oppressive regimes 🌐</li>
+          <li>Escape oppressive regimes 🌍</li>
           <li>Whistleblowing without leaving a trace 📢</li>
           <li>Cheating husband protection 🕶️ (just kidding... kinda 😅)</li>
           <li>Military or government intel ✈️</li>
           <li>Anonymous crypto collabs 🤝</li>
+          <li>Future-proof against quantum attacks 🔮</li>
         </ul>
       </div>
 
       {/* Tile 3: Trust & Open Source */}
       <div className={tileClasses}>
-        <h2 className="text-xl font-semibold mb-2 text-blue-600">🌍 Why Trust It?</h2>
+        <h2 className="text-xl font-semibold mb-2 text-blue-600">🌐 Why Trust It?</h2>
         <p>
           Fully open-source. You can inspect the code, run it yourself, or fork
-          it. Messages are encrypted with NaCl and stored on Solana. No email,
-          no servers, no middlemen.
+          it. Messages are encrypted with <strong>ML-KEM-768 (NIST FIPS 203)</strong> and stored on Solana. 
+          Post-quantum secure. No email, no servers, no middlemen.
         </p>
       </div>
 
@@ -58,21 +58,21 @@ export default function HomeTiles() {
           <li>
             <a
               className="text-blue-500 hover:underline"
-              href="https://faucet.solana.com"
+              href="https://csrc.nist.gov/pubs/fips/203/final"
               target="_blank"
               rel="noreferrer"
             >
-              Solana Faucet
+              NIST FIPS 203 (ML-KEM)
             </a>
           </li>
           <li>
             <a
               className="text-blue-500 hover:underline"
-              href="https://cookbook.solana.com"
+              href="https://faucet.solana.com"
               target="_blank"
               rel="noreferrer"
             >
-              Solana Cookbook
+              Solana Faucet
             </a>
           </li>
         </ul>

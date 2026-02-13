@@ -1,7 +1,6 @@
 'use client';
 
 import { Keypair, PublicKey } from '@solana/web3.js';
-// import { useMemo } from 'react';
 import { ellipsify } from '../ui/ui-layout';
 import { ExplorerLink } from '../cluster/cluster-ui';
 import {
@@ -11,11 +10,9 @@ import {
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useState, useEffect } from 'react';
 
-import nacl from 'tweetnacl';
-import naclUtil from 'tweetnacl-util';
+// QUANTUM-SAFE: Replace NaCl with ML-KEM
+import { encryptMessage, decryptMessage, toBase64, fromBase64 } from '@/lib/quantum-crypto';
 import Modal from 'react-modal';
-
-// comment
 
 export function RelayCreate() {
   const { createEntry } = useRelayProgram();
@@ -23,47 +20,41 @@ export function RelayCreate() {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [recipient, setRecipient] = useState('');
-  const [myKey, setMyKey] = useState(''); // Add myKey state
-  const [myPublicKey, setMyPublicKey] = useState(''); // Add myPublicKey state
+  const [myPrivateKey, setMyPrivateKey] = useState(''); // Changed from myKey
+  const [myPublicKey, setMyPublicKey] = useState(''); 
   const [enc, setEnc] = useState(false);
 
-  const isFormValid = title.trim() !== '' && message.trim() !== '' && recipient.trim() !== '' && myKey.trim() !== '' && myPublicKey.trim() !== '';
+  const isFormValid = title.trim() !== '' && message.trim() !== '' && recipient.trim() !== '' && myPrivateKey.trim() !== '' && myPublicKey.trim() !== '';
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (publicKey && isFormValid) {
-      console.log("recipient", recipient);
-      console.log("recipient length", recipient.length);
-      const recipientUint8 = naclUtil.decodeBase64(recipient); // Decode recipient pub key from Base64
-      const myKeyUint8 = naclUtil.decodeBase64(myKey); // Decode myKey private key from Base64
-
+      console.log("recipient public key length", recipient.length);
 
       let encryptedMessage = message;
 
       if (enc) {
-        const nonce = nacl.randomBytes(nacl.secretbox.nonceLength);
-        // const keyPair = nacl.box.keyPair();
-        // const sharedSecret = nacl.box.before(recipientPubkey.toBuffer(), keyPair.secretKey);
-        const sharedSecret = nacl.box.before(recipientUint8, myKeyUint8);
-
-        const encrypted = nacl.box.after(
-          naclUtil.decodeUTF8(message),
-          nonce,
-          sharedSecret
-        );
-
-        encryptedMessage = JSON.stringify({
-          nonce: naclUtil.encodeBase64(nonce),
-          encrypted: naclUtil.encodeBase64(encrypted),
-          senderPublicKey: myPublicKey
-        });
-        console.log("Length of encryptedMessage:", new TextEncoder().encode(encryptedMessage).length);
+        try {
+          // QUANTUM-SAFE: Use ML-KEM encryption
+          const { ciphertext, nonce } = await encryptMessage(message, recipient);
+          
+          encryptedMessage = JSON.stringify({
+            ciphertext: ciphertext,
+            nonce: nonce,
+            senderPublicKey: myPublicKey
+          });
+          
+          console.log("Length of encryptedMessage:", new TextEncoder().encode(encryptedMessage).length);
+        } catch (error) {
+          console.error("Encryption failed:", error);
+          alert("Failed to encrypt message. Check console for details.");
+          return;
+        }
       }
 
       console.log("recipient length", recipient.length);
       console.log("title length", title.length);
       console.log("encryptedMessage length", encryptedMessage.length);
 
-      // console.log("enc length", enc.length);
       createEntry.mutateAsync({ title, message: encryptedMessage, owner: publicKey, recipient: recipient, enc });
     }
   };
@@ -90,7 +81,7 @@ export function RelayCreate() {
       />
       <input
         type="text"
-        placeholder="Recipient TweetNacl Public Key"
+        placeholder="Recipient ML-KEM Public Key (Base64)"
         value={recipient}
         onChange={(e) => setRecipient(e.target.value)}
         className="input input-bordered input-xs w-full max-w-xs mb-1"
@@ -98,20 +89,20 @@ export function RelayCreate() {
       <input
         type="text"
         placeholder="Your Private Key (Base64) - will NOT be stored"
-        value={myKey}
-        onChange={(e) => setMyKey(e.target.value)}
+        value={myPrivateKey}
+        onChange={(e) => setMyPrivateKey(e.target.value)}
         className="input input-bordered input-xs w-full max-w-xs mb-1"
       />
       <input
         type="text"
-        placeholder="Your Public Key"
+        placeholder="Your Public Key (Base64)"
         value={myPublicKey}
         onChange={(e) => setMyPublicKey(e.target.value)}
         className="input input-bordered input-xs w-full max-w-xs mb-1"
       />
       <div className="form-control">
         <label className="cursor-pointer label">
-          <span className="label-text">Encrypt</span>
+          <span className="label-text">🔐 Quantum-Safe Encrypt</span>
           <input
             type="checkbox"
             checked={enc}
@@ -181,16 +172,12 @@ function RelayCard({ account }: { account: PublicKey }) {
   const { publicKey, signMessage } = useWallet();
   const [message, setMessage] = useState('');
   const [decryptedMessage, setDecryptedMessage] = useState<string | null>(null);
-  // const [showModal, setShowModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // const [privateKey, setPrivateKey] = useState('');
   const [privateKeyInput, setPrivateKeyInput] = useState('');
+  
   const title = accountQuery.data?.title; 
-  // const recipient = accountQuery.data?.recipient;
-  // const recipient = accountQuery.data?.recipient ? new PublicKey(accountQuery.data.recipient) : undefined;
-  const recipient = accountQuery.data?.recipient || ''; // Updated to handle recipient as text
+  const recipient = accountQuery.data?.recipient || '';
   const enc = accountQuery.data?.enc;
-  // const messageData = accountQuery.data?.message ? JSON.parse(accountQuery.data.message) : null;
 
   const isJSON = (str: string) => {
     try {
@@ -201,16 +188,11 @@ function RelayCard({ account }: { account: PublicKey }) {
     return true;
   };
 
-  // const messageData = enc && accountQuery.data?.message && isJSON(accountQuery.data.message)
-  //   ? JSON.parse(accountQuery.data.message)
-  //   : null;
   const messageData = enc && accountQuery.data?.message && isJSON(accountQuery.data.message)
     ? JSON.parse(accountQuery.data.message)
     : accountQuery.data?.message;
 
-  // const isFormValid = message.trim() !== '';
   const isFormValid = message.trim() !== '' && recipient !== undefined && enc !== undefined;
-
 
   const handleSubmit = () => {
     if (publicKey && isFormValid && title) {
@@ -218,20 +200,9 @@ function RelayCard({ account }: { account: PublicKey }) {
     }
   };
 
-  // const handleDecrypt = async () => {
-  //   const { nonce, encrypted, senderPublicKey } = messageData;
-  //   const decrypted = await decryptMessage(encrypted, nonce, senderPublicKey, privateKey);
-  //   setDecryptedMessage(decrypted);
-  // };
-
   const handleDecrypt = () => {
     setIsModalOpen(true);
   };
-
-  // // Function to toggle the modal
-  // const toggleModal = () => {
-  //   setShowModal(!showModal);
-  // };
 
   const handleModalClose = () => {
     setIsModalOpen(false);
@@ -243,23 +214,18 @@ function RelayCard({ account }: { account: PublicKey }) {
     try {
       const messageData = accountQuery.data?.message ? JSON.parse(accountQuery.data.message) : null;
       if (messageData) {
+        // QUANTUM-SAFE: Use ML-KEM decryption
         const decrypted = await decryptMessage(
-          messageData.encrypted,
-          messageData.nonce,
-          messageData.senderPublicKey,
+          messageData.ciphertext,
           privateKeyInput
         );
         setDecryptedMessage(decrypted);
       }
     } catch (error) {
       console.error('Failed to decrypt message', error);
-      setDecryptedMessage('Failed to decrypt message');
+      setDecryptedMessage('❌ Failed to decrypt message. Check your private key.');
     }
   };  
-
-
-
-
 
   if (!publicKey){
     return <p>Connect your wallet</p>
@@ -274,7 +240,6 @@ function RelayCard({ account }: { account: PublicKey }) {
           
           <div className="chat-header">
           <p
-            /*className="card-title text-2xl cursor-pointer"*/
             className="link text-xs text-accent"
             onClick={() => accountQuery.refetch()}
           >
@@ -284,11 +249,10 @@ function RelayCard({ account }: { account: PublicKey }) {
           
           <div className="chat-bubble">
           <p> 
-          {/* {accountQuery.data?.message} */}
           {decryptedMessage || accountQuery.data?.message}
           </p>
-          <p>Recipient: {recipient?.toString()}</p> {/* Convert recipient to string */}
-          <p>Encrypted: {enc ? 'Yes' : 'No'}</p>
+          <p>Recipient: {recipient?.toString()}</p>
+          <p>Encrypted: {enc ? '🔐 Quantum-Safe' : 'No'}</p>
           {enc && (
               <button onClick={handleDecrypt} className="btn btn-xs sm:btn-sm btn-accent">
                 Decrypt
@@ -297,7 +261,6 @@ function RelayCard({ account }: { account: PublicKey }) {
           </div>
 
           <div className="text-left">
-          {/* <div className="text-center space-y-4"> */}
             <div className="chat-footer opacity-50">
             <p>
               <ExplorerLink
@@ -307,7 +270,6 @@ function RelayCard({ account }: { account: PublicKey }) {
               />
             &nbsp;
             <button
-              /*className="btn btn-xs btn-error btn-outline"*/
               className="btn btn-circle btn-outline"
               onClick={() => {
                 if (
@@ -336,7 +298,6 @@ function RelayCard({ account }: { account: PublicKey }) {
                   strokeWidth="2"
                   d="M6 18L18 6M6 6l12 12" />
               </svg>
-              
             </button>
             </p>
             </div>
@@ -344,58 +305,28 @@ function RelayCard({ account }: { account: PublicKey }) {
         </div>
       </div>
       <Modal isOpen={isModalOpen} onRequestClose={handleModalClose}>
-        <h2>Decrypt Message</h2>
+        <h2>🔓 Decrypt Quantum-Safe Message</h2>
         {decryptedMessage ? (
           <div>
-            <p>Decrypted Message: {decryptedMessage}</p>
-            <button onClick={handleModalClose} className="btn btn-accent">Close</button>
+            <p className="font-bold">Decrypted Message:</p>
+            <p className="p-4 bg-base-200 rounded mt-2">{decryptedMessage}</p>
+            <button onClick={handleModalClose} className="btn btn-accent mt-4">Close</button>
           </div>
         ) : (
           <div>
-            {/* <p>Nonce: {accountQuery.data?.message ? JSON.parse(accountQuery.data.message).nonce : ''}</p>
-            <p>Encrypted Message: {accountQuery.data?.message ? JSON.parse(accountQuery.data.message).encrypted : ''}</p>
-            <p>Sender Public Key: {accountQuery.data?.message ? JSON.parse(accountQuery.data.message).senderPublicKey : ''}</p> */}
-            <p>Nonce: {messageData?.nonce}</p>
-            <p>Encrypted Message: {messageData?.encrypted}</p>
-            <p>Sender Public Key: {messageData?.senderPublicKey}</p>
+            <p className="text-xs opacity-60 mb-2">Ciphertext: {messageData?.ciphertext?.substring(0, 50)}...</p>
+            <p className="text-xs opacity-60 mb-2">Sender: {messageData?.senderPublicKey?.substring(0, 50)}...</p>
             <input
-              type="text"
-              placeholder="Enter your private key"
+              type="password"
+              placeholder="Enter your ML-KEM private key"
               value={privateKeyInput}
               onChange={(e) => setPrivateKeyInput(e.target.value)}
-              className="input input-bordered input-xs w-full max-w-xs mb-1"
+              className="input input-bordered w-full mb-2"
             />
-            <button onClick={handleDecryptMessage} className="btn btn-accent">Decrypt</button>
+            <button onClick={handleDecryptMessage} className="btn btn-accent">🔓 Decrypt</button>
           </div>
         )}
       </Modal>
     </div>
   );
-}
-
-
-async function decryptMessage(
-  encrypted: string, 
-  nonce: string, 
-  senderPublicKey: string, 
-  privateKey: string
-) {
-  // Add your decryption logic here
-  const senderPublicKeyUint8 = naclUtil.decodeBase64(senderPublicKey);
-  const nonceUint8 = naclUtil.decodeBase64(nonce);
-  const privateKeyUint8 = naclUtil.decodeBase64(privateKey);
-
-  
-  const sharedSecret = nacl.box.before(senderPublicKeyUint8, privateKeyUint8);
-  const encryptedUint8 = naclUtil.decodeBase64(encrypted);
-
-  const decryptedMessage = nacl.box.open.after(encryptedUint8, nonceUint8, sharedSecret);
-
-  // return decrypted ? naclUtil.encodeUTF8(decrypted) : 'Failed to decrypt message';
-
-  if (decryptedMessage) {
-    return naclUtil.encodeUTF8(decryptedMessage);
-  } else {
-    throw new Error('Failed to decrypt the message');
-  }
 }

@@ -17,7 +17,8 @@ idl-build = ["anchor-lang/idl-build"]
 default = []
 
 [dependencies]
-anchor-lang = "0.32.1"
+# anchor-lang = "0.32.1" - add init-if-needed
+anchor-lang = { version = "0.32.1", features = ["init-if-needed"] }
 # optional but usually good to add now if you’ll use SPL later:
 # anchor-spl = "0.32.1"
 
