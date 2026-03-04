@@ -62,7 +62,8 @@ export default function MyRegistry() {
         <div className="p-3 bg-base-300 rounded-lg">
           <div className="text-xs opacity-60 mb-1">ML-KEM-768 Public Key</div>
           <div className="text-sm font-mono break-all">
-            {registry.pqPublicKey || registry.naclPublicKey}
+            {/* {registry.pqPublicKey || registry.naclPublicKey} */}
+            {registry.pqPublicKey ? Buffer.from(registry.pqPublicKey).toString('base64') : ''}
           </div>
           <div className="text-xs opacity-40 mt-1">
             Length: {(registry.pqPublicKey || registry.naclPublicKey)?.length} characters

@@ -7,17 +7,17 @@ skip-lint = false
 idl-build = ["anchor-lang/idl-build"]
 
 [programs.localnet]
-relay = "DevpMzGDfkVPuzkGY19S1KDP86YWKECqJ1cSwuVieiD4"
+relay = "6rAhthMf4epVSGp1K6iFVdsZMMftGgK2iVyhxLu5mjhC"
 
 [programs.devnet]
-relay = "DevpMzGDfkVPuzkGY19S1KDP86YWKECqJ1cSwuVieiD4"
+relay = "6rAhthMf4epVSGp1K6iFVdsZMMftGgK2iVyhxLu5mjhC"
 
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"    
+cluster = "devnet"   
 wallet = "/root/.config/solana/id.json"
 
 [scripts]

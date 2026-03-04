@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ml_kem768 } from '@noble/post-quantum/ml-kem';
+// import { ml_kem768 } from '@noble/post-quantum/ml-kem';
+import { ml_kem768 } from '@noble/post-quantum/ml-kem.js';
 
 // Utility function to convert Uint8Array to base64
 function toBase64(bytes: Uint8Array): string {

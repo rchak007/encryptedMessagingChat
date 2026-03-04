@@ -1,5 +1,5 @@
 {
-  "address": "DevpMzGDfkVPuzkGY19S1KDP86YWKECqJ1cSwuVieiD4",
+  "address": "6rAhthMf4epVSGp1K6iFVdsZMMftGgK2iVyhxLu5mjhC",
   "metadata": {
     "name": "relay",
     "version": "0.1.0",
@@ -160,8 +160,8 @@
       ],
       "args": [
         {
-          "name": "nacl_public_key",
-          "type": "string"
+          "name": "pq_public_key",
+          "type": "bytes"
         }
       ]
     },
@@ -410,8 +410,8 @@
   "errors": [
     {
       "code": 6000,
-      "name": "InvalidNaClPublicKey",
-      "msg": "Invalid NaCl public key."
+      "name": "InvalidPQPublicKey",
+      "msg": "Invalid post-quantum public key."
     },
     {
       "code": 6001,
@@ -603,8 +603,8 @@
             "type": "pubkey"
           },
           {
-            "name": "nacl_public_key",
-            "type": "string"
+            "name": "pq_public_key",
+            "type": "bytes"
           },
           {
             "name": "updated_at_slot",

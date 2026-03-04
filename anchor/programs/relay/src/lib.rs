@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("DevpMzGDfkVPuzkGY19S1KDP86YWKECqJ1cSwuVieiD4");
+declare_id!("6rAhthMf4epVSGp1K6iFVdsZMMftGgK2iVyhxLu5mjhC");
 
 pub const REGISTRY_SEED: &[u8] = b"registry";
 pub const GROUP_SEED: &[u8] = b"group";
@@ -35,9 +35,12 @@ pub mod relay {
     //     reg.updated_at_slot = Clock::get()?.slot;
     //     Ok(())
     // }
-    pub fn register(ctx: Context<Register>, pq_public_key: String) -> Result<()> {
-        require!(!pq_public_key.is_empty(), RelayError::InvalidPQPublicKey);
-        require!(pq_public_key.len() <= 2000, RelayError::InvalidPQPublicKey);  // base64 encoded ~1184 bytes
+    // pub fn register(ctx: Context<Register>, pq_public_key: String) -> Result<()> {
+    //     require!(!pq_public_key.is_empty(), RelayError::InvalidPQPublicKey);
+    pub fn register(ctx: Context<Register>, pq_public_key: Vec<u8>) -> Result<()> {
+        // require!(pq_public_key.len() == 1184, RelayError::InvalidPQPublicKey);    
+        require!(pq_public_key.len() > 0, RelayError::InvalidPQPublicKey);  // just temporary test
+        // require!(pq_public_key.len() <= 2000, RelayError::InvalidPQPublicKey);  // base64 encoded ~1184 bytes
         
         let reg = &mut ctx.accounts.registry;
         reg.owner = ctx.accounts.owner.key();
@@ -196,7 +199,10 @@ pub struct Register<'info> {
         payer = owner,
         seeds = [REGISTRY_SEED, owner.key().as_ref()],
         bump,
-        space = Registry::SPACE
+        space = Registry::SPACE,
+        // realloc = Registry::SPACE,
+        // realloc::payer = owner,
+        // realloc::zero = false,
     )]
     pub registry: Account<'info, Registry>,
     #[account(mut)]
@@ -293,11 +299,13 @@ pub struct SendGroupMessage<'info> {
 #[account]
 pub struct Registry {
     pub owner: Pubkey,
-    pub pq_public_key: String,  // Changed from nacl_public_key to Quantum safe
+    // pub pq_public_key: String,  // Changed from nacl_public_key to Quantum safe
+    pub pq_public_key: Vec<u8>,  // bytes instead of String
     pub updated_at_slot: u64,
 }
 impl Registry {
-    pub const SPACE: usize = 8 + 32 + 4 + 2000 + 8;  // Increased from 64 to 2000
+    // pub const SPACE: usize = 8 + 32 + 4 + 2000 + 8;  // Increased from 64 to 2000
+    pub const SPACE: usize = 8 + 32 + 4 + 1184 + 8;  // exact ML-KEM-768 pubkey size
 }
 
 
@@ -366,8 +374,10 @@ impl GroupMessage {
 // ----------------------------
 #[error_code]
 pub enum RelayError {
-    #[msg("Invalid NaCl public key.")]
-    InvalidNaClPublicKey,
+    // #[msg("Invalid NaCl public key.")]
+    // InvalidNaClPublicKey,
+    #[msg("Invalid post-quantum public key.")]
+    InvalidPQPublicKey,    
 
     #[msg("No members provided.")]
     NoMembers,

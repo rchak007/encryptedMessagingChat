@@ -6,15 +6,13 @@ import { PublicKey } from '@solana/web3.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCluster } from '../cluster/cluster-data-access';
 import { useAnchorProvider } from '../solana/solana-provider';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useTransactionToast } from '../ui/ui-layout';
 
-// Import IDL
-import relayIdl from '../../../anchor/target/idl/relay.json';
-
-// QUANTUM-SAFE: Update this with your new program ID after deployment
-const programId = new PublicKey("DevpMzGDfkVPuzkGY19S1KDP86YWKECqJ1cSwuVieiD4");
+// PRODUCTION: Load IDL from public folder
+// This allows the IDL to be served as a static asset
+let relayIdl: any = null;
 
 export function useRelayProgram() {
   const { connection } = useConnection();
@@ -23,21 +21,45 @@ export function useRelayProgram() {
   const wallet = useWallet();
   const transactionToast = useTransactionToast();
   const client = useQueryClient();
+  const [idlLoaded, setIdlLoaded] = useState(false);
+
+  // Load IDL from public folder on mount
+  useEffect(() => {
+    if (!relayIdl) {
+      fetch('/idl/relay.json')
+        .then(res => res.json())
+        .then(data => {
+          relayIdl = data;
+          setIdlLoaded(true);
+        })
+        .catch(err => {
+          console.error('Failed to load IDL:', err);
+        });
+    } else {
+      setIdlLoaded(true);
+    }
+  }, []);
+
+  const programId = useMemo(() => {
+    if (!relayIdl) return null;
+    return new PublicKey(relayIdl.address);
+  }, [idlLoaded]);
 
   const program = useMemo(() => {
-    if (!wallet.publicKey) return null;
+    if (!wallet.publicKey || !relayIdl || !programId) return null;
     
     try {
-      return new Program(relayIdl as any, provider) as any;
+      return new Program(relayIdl, provider) as any;
     } catch (e) {
       console.error("Program init error:", e);
       return null;
     }
-  }, [provider, wallet.publicKey]);
+  }, [provider, wallet.publicKey, idlLoaded, programId]);
 
   const getProgramAccount = useQuery({
     queryKey: ['get-program-account', { cluster: cluster.name }],
-    queryFn: () => connection.getParsedAccountInfo(programId),
+    queryFn: () => programId ? connection.getParsedAccountInfo(programId) : null,
+    enabled: !!programId,
   });
 
   const accounts = useQuery({
@@ -61,6 +83,8 @@ export function useRelayProgram() {
       recipient: string;
       enc: boolean;
     }) => {
+      if (!programId) throw new Error('Program ID not loaded');
+      
       const [relayAddress] = await PublicKey.findProgramAddress(
         [Buffer.from('relay'), Buffer.from(title), owner.toBuffer()],
         programId
@@ -95,7 +119,7 @@ export function useRelayProgramAccount({ account }: { account: PublicKey }) {
 
   const accountQuery = useQuery({
     queryKey: ['relay', 'fetch', { cluster: cluster.name, account }],
-    queryFn: () => program.account.relay.fetch(account),
+    queryFn: () => program?.account.relay.fetch(account),
     enabled: !!program,
   });
 
@@ -131,7 +155,7 @@ export function useRelayProgramAccount({ account }: { account: PublicKey }) {
     mutationFn: (title: string) =>
       program.methods.close(title).accounts({ relay: account }).rpc(),
     onSuccess: (signature) => {
-      transactionToast(signature);
+      transactionToast(signature as string);
       return accounts.refetch();
     },
     onError: () => toast.error('Failed to delete entry'),

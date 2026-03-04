@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/relay.json`.
  */
 export type Relay = {
-  "address": "DevpMzGDfkVPuzkGY19S1KDP86YWKECqJ1cSwuVieiD4",
+  "address": "6rAhthMf4epVSGp1K6iFVdsZMMftGgK2iVyhxLu5mjhC",
   "metadata": {
     "name": "relay",
     "version": "0.1.0",
@@ -166,8 +166,8 @@ export type Relay = {
       ],
       "args": [
         {
-          "name": "naclPublicKey",
-          "type": "string"
+          "name": "pqPublicKey",
+          "type": "bytes"
         }
       ]
     },
@@ -416,8 +416,8 @@ export type Relay = {
   "errors": [
     {
       "code": 6000,
-      "name": "invalidNaClPublicKey",
-      "msg": "Invalid NaCl public key."
+      "name": "invalidPqPublicKey",
+      "msg": "Invalid post-quantum public key."
     },
     {
       "code": 6001,
@@ -609,8 +609,8 @@ export type Relay = {
             "type": "pubkey"
           },
           {
-            "name": "naclPublicKey",
-            "type": "string"
+            "name": "pqPublicKey",
+            "type": "bytes"
           },
           {
             "name": "updatedAtSlot",
