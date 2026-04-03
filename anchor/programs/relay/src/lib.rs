@@ -9,52 +9,67 @@ pub const GMSG_SEED: &[u8] = b"gmsg";
 
 pub const MAX_MEMBERS: usize = 20;
 
-// You can store wrapped keys as bytes (recommended) or as strings.
-// If bytes: typical NaCl box output for a 32-byte key is small.
-// We'll cap to keep account size bounded.
-// pub const MAX_WRAPPED_KEY_BYTES: usize = 128;
-pub const MAX_WRAPPED_KEY_BYTES: usize = 1200;  // For ML-KEM-768 wrapped keys -- now quantum safe.
+pub const MAX_WRAPPED_KEY_BYTES: usize = 1200;  // For ML-KEM-768 wrapped keys
 
-pub const MAX_CIPHERTEXT_BYTES: usize = 1200;
+pub const MAX_CIPHERTEXT_BYTES: usize = 900;   // Reduced to fit single tx (~900 bytes plaintext)
 pub const MAX_NONCE_BYTES: usize = 64;
+
+// ML-KEM-768 public key = 1184 bytes, split into two 592-byte chunks
+pub const PQ_KEY_TOTAL: usize = 1184;
+pub const PQ_KEY_HALF: usize = 592;
 
 #[program]
 pub mod relay {
     use super::*;
 
     // ----------------------------
-    // REGISTRY (per-user)
+    // REGISTRY: Two-part registration
     // ----------------------------
-    // pub fn register(ctx: Context<Register>, nacl_public_key: String) -> Result<()> {
-    //     require!(!nacl_public_key.is_empty(), RelayError::InvalidNaClPublicKey);
-    //     require!(nacl_public_key.len() <= 64, RelayError::InvalidNaClPublicKey);
+    // Part 1: Creates the registry PDA and writes the first 592 bytes.
+    //         Sets is_complete = false.
+    // ----------------------------
+    pub fn register_part1(ctx: Context<RegisterPart1>, key_chunk: Vec<u8>) -> Result<()> {
+        require!(key_chunk.len() == PQ_KEY_HALF, RelayError::InvalidChunkSize);
 
-    //     let reg = &mut ctx.accounts.registry;
-    //     reg.owner = ctx.accounts.owner.key();
-    //     reg.nacl_public_key = nacl_public_key;
-    //     reg.updated_at_slot = Clock::get()?.slot;
-    //     Ok(())
-    // }
-    // pub fn register(ctx: Context<Register>, pq_public_key: String) -> Result<()> {
-    //     require!(!pq_public_key.is_empty(), RelayError::InvalidPQPublicKey);
-    pub fn register(ctx: Context<Register>, pq_public_key: Vec<u8>) -> Result<()> {
-        // require!(pq_public_key.len() == 1184, RelayError::InvalidPQPublicKey);    
-        require!(pq_public_key.len() > 0, RelayError::InvalidPQPublicKey);  // just temporary test
-        // require!(pq_public_key.len() <= 2000, RelayError::InvalidPQPublicKey);  // base64 encoded ~1184 bytes
-        
         let reg = &mut ctx.accounts.registry;
         reg.owner = ctx.accounts.owner.key();
-        reg.pq_public_key = pq_public_key;  // renamed from nacl_public_key
+        reg.is_complete = false;
+
+        // Write first half (bytes 0..592)
+        reg.pq_public_key[..PQ_KEY_HALF].copy_from_slice(&key_chunk);
+        // Zero out second half explicitly
+        reg.pq_public_key[PQ_KEY_HALF..].fill(0);
+
         reg.updated_at_slot = Clock::get()?.slot;
         Ok(())
     }
 
+    // ----------------------------
+    // Part 2: Writes the second 592 bytes into the existing registry PDA.
+    //         Sets is_complete = true.
+    //         Validates that the signer is the same owner.
+    // ----------------------------
+    pub fn register_part2(ctx: Context<RegisterPart2>, key_chunk: Vec<u8>) -> Result<()> {
+        require!(key_chunk.len() == PQ_KEY_HALF, RelayError::InvalidChunkSize);
 
+        let reg = &mut ctx.accounts.registry;
+
+        // Ensure the signer is the original owner who ran part1
+        require!(reg.owner == ctx.accounts.owner.key(), RelayError::OwnerMismatch);
+
+        // Ensure part1 was already done (owner is set) but not yet complete
+        require!(!reg.is_complete, RelayError::AlreadyComplete);
+
+        // Write second half (bytes 592..1184)
+        reg.pq_public_key[PQ_KEY_HALF..].copy_from_slice(&key_chunk);
+
+        reg.is_complete = true;
+        reg.updated_at_slot = Clock::get()?.slot;
+        Ok(())
+    }
 
     // ----------------------------
     // GROUP (create once)
-    // group_id should be random [u8;32] from client
-    // wrapped_keys must include one entry per member
     // ----------------------------
     pub fn create_group(
         ctx: Context<CreateGroup>,
@@ -65,13 +80,11 @@ pub mod relay {
         require!(members.len() > 0, RelayError::NoMembers);
         require!(members.len() <= MAX_MEMBERS, RelayError::TooManyMembers);
 
-        // creator must be a member (product rule)
         require!(
             members.iter().any(|m| *m == ctx.accounts.creator.key()),
             RelayError::CreatorNotMember
         );
 
-        // validate wrapped keys match members exactly
         validate_wrapped_keys(&members, &wrapped_keys)?;
 
         let g = &mut ctx.accounts.group;
@@ -83,7 +96,6 @@ pub mod relay {
         g.created_at_slot = slot;
         g.updated_at_slot = slot;
 
-        // init counter for messages
         let c = &mut ctx.accounts.counter;
         c.group = g.key();
         c.next_id = 0;
@@ -93,8 +105,6 @@ pub mod relay {
 
     // ----------------------------
     // GROUP KEY ROTATION
-    // Any member can initiate, but cannot exclude others:
-    // must provide wrapped_keys for ALL current members.
     // ----------------------------
     pub fn rotate_group_key(
         ctx: Context<RotateGroupKey>,
@@ -104,7 +114,6 @@ pub mod relay {
         let g = &mut ctx.accounts.group;
         require!(g.group_id == group_id, RelayError::GroupIdMismatch);
 
-        // signer must be a member
         require!(
             g.members.iter().any(|m| *m == ctx.accounts.member.key()),
             RelayError::NotGroupMember
@@ -121,8 +130,6 @@ pub mod relay {
 
     // ----------------------------
     // SEND GROUP MESSAGE
-    // ciphertext/nonce produced off-chain using the current group key
-    // message includes key_version so recipients know which wrapped key to use
     // ----------------------------
     pub fn send_group_message(
         ctx: Context<SendGroupMessage>,
@@ -134,19 +141,16 @@ pub mod relay {
         let g = &ctx.accounts.group;
         require!(g.group_id == group_id, RelayError::GroupIdMismatch);
 
-        // sender must be a member
         require!(
             g.members.iter().any(|m| *m == ctx.accounts.sender.key()),
             RelayError::NotGroupMember
         );
 
-        // ensure sender used current version (or allow older? MVP: require current)
         require!(key_version == g.key_version, RelayError::KeyVersionMismatch);
 
         require!(ciphertext.len() > 0 && ciphertext.len() <= MAX_CIPHERTEXT_BYTES, RelayError::CiphertextTooLong);
         require!(nonce.len() > 0 && nonce.len() <= MAX_NONCE_BYTES, RelayError::NonceTooLong);
 
-        // increment message id
         let counter = &mut ctx.accounts.counter;
         let msg_id = counter.next_id;
         counter.next_id = counter.next_id.checked_add(1).ok_or(RelayError::MathOverflow)?;
@@ -170,8 +174,6 @@ pub mod relay {
 fn validate_wrapped_keys(members: &Vec<Pubkey>, wrapped_keys: &Vec<MemberWrappedKey>) -> Result<()> {
     require!(wrapped_keys.len() == members.len(), RelayError::WrappedKeysCountMismatch);
 
-    // Enforce: every wrapped_keys.member is in members, no duplicates, and all members covered.
-    // We'll do a simple O(n^2) check since MAX_MEMBERS is small (<= 20).
     for wk in wrapped_keys.iter() {
         require!(
             members.iter().any(|m| *m == wk.member),
@@ -192,22 +194,34 @@ fn validate_wrapped_keys(members: &Vec<Pubkey>, wrapped_keys: &Vec<MemberWrapped
 // Accounts
 // ----------------------------
 
+// Part 1: init_if_needed creates the PDA and writes first half
 #[derive(Accounts)]
-pub struct Register<'info> {
+pub struct RegisterPart1<'info> {
     #[account(
         init_if_needed,
         payer = owner,
         seeds = [REGISTRY_SEED, owner.key().as_ref()],
         bump,
         space = Registry::SPACE,
-        // realloc = Registry::SPACE,
-        // realloc::payer = owner,
-        // realloc::zero = false,
     )]
     pub registry: Account<'info, Registry>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+// Part 2: mutates the existing PDA, no init needed
+#[derive(Accounts)]
+pub struct RegisterPart2<'info> {
+    #[account(
+        mut,
+        seeds = [REGISTRY_SEED, owner.key().as_ref()],
+        bump,
+    )]
+    pub registry: Account<'info, Registry>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    // No system_program needed — account already exists
 }
 
 #[derive(Accounts)]
@@ -286,28 +300,17 @@ pub struct SendGroupMessage<'info> {
 // State
 // ----------------------------
 
-// #[account]
-// pub struct Registry {
-//     pub owner: Pubkey,
-//     pub nacl_public_key: String,
-//     pub updated_at_slot: u64,
-// }
-// impl Registry {
-//     pub const SPACE: usize = 8 + 32 + 4 + 64 + 8;
-// }
-
 #[account]
 pub struct Registry {
-    pub owner: Pubkey,
-    // pub pq_public_key: String,  // Changed from nacl_public_key to Quantum safe
-    pub pq_public_key: Vec<u8>,  // bytes instead of String
-    pub updated_at_slot: u64,
+    pub owner: Pubkey,              // 32 bytes
+    pub pq_public_key: [u8; 1184],  // ML-KEM-768 public key (fixed array)
+    pub is_complete: bool,           // true after both parts are written
+    pub updated_at_slot: u64,        // 8 bytes
 }
 impl Registry {
-    // pub const SPACE: usize = 8 + 32 + 4 + 2000 + 8;  // Increased from 64 to 2000
-    pub const SPACE: usize = 8 + 32 + 4 + 1184 + 8;  // exact ML-KEM-768 pubkey size
+    // 8 (discriminator) + 32 (owner) + 1184 (key) + 1 (is_complete) + 8 (slot) = 1233
+    pub const SPACE: usize = 8 + 32 + PQ_KEY_TOTAL + 1 + 8;
 }
-
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct MemberWrappedKey {
@@ -325,9 +328,6 @@ pub struct GroupState {
     pub updated_at_slot: u64,
 }
 impl GroupState {
-    // Conservative sizing (caps):
-    // - members: 4 + MAX_MEMBERS*32
-    // - wrapped_keys: 4 + MAX_MEMBERS*(32 + (4 + MAX_WRAPPED_KEY_BYTES))
     pub const SPACE: usize =
         8 +                 // discr
         32 +                // group_id
@@ -374,10 +374,17 @@ impl GroupMessage {
 // ----------------------------
 #[error_code]
 pub enum RelayError {
-    // #[msg("Invalid NaCl public key.")]
-    // InvalidNaClPublicKey,
     #[msg("Invalid post-quantum public key.")]
-    InvalidPQPublicKey,    
+    InvalidPQPublicKey,
+
+    #[msg("Invalid chunk size — expected exactly 592 bytes.")]
+    InvalidChunkSize,
+
+    #[msg("Owner mismatch — signer does not own this registry.")]
+    OwnerMismatch,
+
+    #[msg("Registration already complete.")]
+    AlreadyComplete,
 
     #[msg("No members provided.")]
     NoMembers,

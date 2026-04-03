@@ -111,16 +111,16 @@
       ]
     },
     {
-      "name": "register",
+      "name": "register_part1",
       "discriminator": [
-        211,
+        108,
+        200,
+        83,
+        107,
         124,
-        67,
-        15,
-        211,
-        194,
-        178,
-        240
+        40,
+        109,
+        171
       ],
       "accounts": [
         {
@@ -160,7 +160,58 @@
       ],
       "args": [
         {
-          "name": "pq_public_key",
+          "name": "key_chunk",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "register_part2",
+      "discriminator": [
+        106,
+        118,
+        24,
+        117,
+        207,
+        134,
+        219,
+        242
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "key_chunk",
           "type": "bytes"
         }
       ]
@@ -415,66 +466,81 @@
     },
     {
       "code": 6001,
+      "name": "InvalidChunkSize",
+      "msg": "Invalid chunk size — expected exactly 592 bytes."
+    },
+    {
+      "code": 6002,
+      "name": "OwnerMismatch",
+      "msg": "Owner mismatch — signer does not own this registry."
+    },
+    {
+      "code": 6003,
+      "name": "AlreadyComplete",
+      "msg": "Registration already complete."
+    },
+    {
+      "code": 6004,
       "name": "NoMembers",
       "msg": "No members provided."
     },
     {
-      "code": 6002,
+      "code": 6005,
       "name": "TooManyMembers",
       "msg": "Too many members."
     },
     {
-      "code": 6003,
+      "code": 6006,
       "name": "CreatorNotMember",
       "msg": "Creator must be a member."
     },
     {
-      "code": 6004,
+      "code": 6007,
       "name": "GroupIdMismatch",
       "msg": "Group id mismatch."
     },
     {
-      "code": 6005,
+      "code": 6008,
       "name": "NotGroupMember",
       "msg": "Signer is not a group member."
     },
     {
-      "code": 6006,
+      "code": 6009,
       "name": "WrappedKeysCountMismatch",
       "msg": "Wrapped keys count must equal members count."
     },
     {
-      "code": 6007,
+      "code": 6010,
       "name": "WrappedKeyNotMember",
       "msg": "Wrapped key refers to a wallet not in members."
     },
     {
-      "code": 6008,
+      "code": 6011,
       "name": "WrappedKeyTooLong",
       "msg": "Wrapped key too long."
     },
     {
-      "code": 6009,
+      "code": 6012,
       "name": "WrappedKeysMissingOrDuplicate",
       "msg": "Wrapped keys missing or duplicate for a member."
     },
     {
-      "code": 6010,
+      "code": 6013,
       "name": "CiphertextTooLong",
       "msg": "Ciphertext too long."
     },
     {
-      "code": 6011,
+      "code": 6014,
       "name": "NonceTooLong",
       "msg": "Nonce too long."
     },
     {
-      "code": 6012,
+      "code": 6015,
       "name": "KeyVersionMismatch",
       "msg": "Key version mismatch."
     },
     {
-      "code": 6013,
+      "code": 6016,
       "name": "MathOverflow",
       "msg": "Math overflow."
     }
@@ -604,7 +670,16 @@
           },
           {
             "name": "pq_public_key",
-            "type": "bytes"
+            "type": {
+              "array": [
+                "u8",
+                1184
+              ]
+            }
+          },
+          {
+            "name": "is_complete",
+            "type": "bool"
           },
           {
             "name": "updated_at_slot",

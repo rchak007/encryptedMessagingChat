@@ -117,16 +117,16 @@ export type Relay = {
       ]
     },
     {
-      "name": "register",
+      "name": "registerPart1",
       "discriminator": [
-        211,
+        108,
+        200,
+        83,
+        107,
         124,
-        67,
-        15,
-        211,
-        194,
-        178,
-        240
+        40,
+        109,
+        171
       ],
       "accounts": [
         {
@@ -166,7 +166,58 @@ export type Relay = {
       ],
       "args": [
         {
-          "name": "pqPublicKey",
+          "name": "keyChunk",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "registerPart2",
+      "discriminator": [
+        106,
+        118,
+        24,
+        117,
+        207,
+        134,
+        219,
+        242
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "keyChunk",
           "type": "bytes"
         }
       ]
@@ -421,66 +472,81 @@ export type Relay = {
     },
     {
       "code": 6001,
+      "name": "invalidChunkSize",
+      "msg": "Invalid chunk size — expected exactly 592 bytes."
+    },
+    {
+      "code": 6002,
+      "name": "ownerMismatch",
+      "msg": "Owner mismatch — signer does not own this registry."
+    },
+    {
+      "code": 6003,
+      "name": "alreadyComplete",
+      "msg": "Registration already complete."
+    },
+    {
+      "code": 6004,
       "name": "noMembers",
       "msg": "No members provided."
     },
     {
-      "code": 6002,
+      "code": 6005,
       "name": "tooManyMembers",
       "msg": "Too many members."
     },
     {
-      "code": 6003,
+      "code": 6006,
       "name": "creatorNotMember",
       "msg": "Creator must be a member."
     },
     {
-      "code": 6004,
+      "code": 6007,
       "name": "groupIdMismatch",
       "msg": "Group id mismatch."
     },
     {
-      "code": 6005,
+      "code": 6008,
       "name": "notGroupMember",
       "msg": "Signer is not a group member."
     },
     {
-      "code": 6006,
+      "code": 6009,
       "name": "wrappedKeysCountMismatch",
       "msg": "Wrapped keys count must equal members count."
     },
     {
-      "code": 6007,
+      "code": 6010,
       "name": "wrappedKeyNotMember",
       "msg": "Wrapped key refers to a wallet not in members."
     },
     {
-      "code": 6008,
+      "code": 6011,
       "name": "wrappedKeyTooLong",
       "msg": "Wrapped key too long."
     },
     {
-      "code": 6009,
+      "code": 6012,
       "name": "wrappedKeysMissingOrDuplicate",
       "msg": "Wrapped keys missing or duplicate for a member."
     },
     {
-      "code": 6010,
+      "code": 6013,
       "name": "ciphertextTooLong",
       "msg": "Ciphertext too long."
     },
     {
-      "code": 6011,
+      "code": 6014,
       "name": "nonceTooLong",
       "msg": "Nonce too long."
     },
     {
-      "code": 6012,
+      "code": 6015,
       "name": "keyVersionMismatch",
       "msg": "Key version mismatch."
     },
     {
-      "code": 6013,
+      "code": 6016,
       "name": "mathOverflow",
       "msg": "Math overflow."
     }
@@ -610,7 +676,16 @@ export type Relay = {
           },
           {
             "name": "pqPublicKey",
-            "type": "bytes"
+            "type": {
+              "array": [
+                "u8",
+                1184
+              ]
+            }
+          },
+          {
+            "name": "isComplete",
+            "type": "bool"
           },
           {
             "name": "updatedAtSlot",
