@@ -46,6 +46,14 @@
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/web"],
+      "options": {
+        "jestConfig": "web/jest.config.ts",
+        "passWithNoTests": true
+      }
     }
   },
   "tags": []

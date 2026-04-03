@@ -1,18 +1,11 @@
-import { UiLayout } from '@/components/ui/ui-layout';
 import KeyPairGenerator from '@/components/ui/QuantumKeyPairGenerator';
 import HomeTiles from '@/components/ui/HomeTiles';
 import RegisterWallet from "@/components/relay/register-wallet";
 import DecryptComposePanel from "@/components/relay/DecryptComposePanel";
 
-const navLinks = [
-  { label: 'Home', path: '/' },
-  { label: 'Relay', path: '/relay' },
-  { label: 'Docs', path: '/docs' },
-];
-
 export default function DashboardFeature() {
   return (
-    <UiLayout links={navLinks}>
+    <>
       <HomeTiles />
 
       <div className="text-center text-lg my-10">
@@ -24,7 +17,6 @@ export default function DashboardFeature() {
       <RegisterWallet />
 
       <DecryptComposePanel />
-
-    </UiLayout>
+    </>
   );
 }

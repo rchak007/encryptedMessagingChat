@@ -89,17 +89,27 @@ export default function RegisterWallet() {
       // const pubKeyBytes = Array.from(Buffer.from(cleanKey, 'base64'));
       // const pubKeyBytes = Buffer.from(cleanKey, 'base64');
       // const pubKeyBytes = new Uint8Array(Buffer.from(cleanKey, 'base64'));
-      const pubKeyBytes = Array.from(new Uint8Array(Buffer.from(cleanKey, 'base64')));
-      if (pubKeyBytes.length !== 1184) {
-        setStatus(`❌ Invalid key length: ${pubKeyBytes.length} bytes (expected 1184)`);
+      // const pubKeyBytes = Array.from(new Uint8Array(Buffer.from(cleanKey, 'base64')));
+
+      // FIX: Anchor expects Buffer directly for Vec<u8>, not Array
+      // const pubKeyBuffer = Buffer.from(cleanKey, 'base64');
+
+      // Anchor "bytes" type requires a proper Buffer (not Uint8Array)
+      // Error: Blob.encode[data] requires (length 1184) Buffer as src
+      const pubKeyBuffer = Buffer.from(cleanKey, 'base64');
+
+      if (pubKeyBuffer.length !== 1184) {
+        setStatus(`❌ Invalid key length: ${pubKeyBuffer.length} bytes (expected 1184)`);
         return;
       }
 
+      // Verify it's a proper Buffer with correct length
       console.log('Key length chars:', cleanKey.length);
-      console.log('Key length bytes:', pubKeyBytes.length);
+      console.log('Key length bytes:', pubKeyBuffer.length);
+      console.log('Is Buffer:', Buffer.isBuffer(pubKeyBuffer));
 
       const sig = await program.methods
-        .register(pubKeyBytes)
+        .register(pubKeyBuffer)  // Pass as Node.js Buffer
         // .register(pqPub.trim())
         .accounts({
           registry: registryPda,
@@ -170,7 +180,7 @@ export default function RegisterWallet() {
           <div className="flex items-center gap-2">
             <span className="text-green-500">✓</span>
             {/* <span>Wallet: {publicKey.toBase58().slice(0, 8)}...</span> */}
-            <span>Wallet: {publicKey.toBase58()}</span>
+            <span>Wallet: {publicKey?.toBase58()}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-green-500">✓</span>
